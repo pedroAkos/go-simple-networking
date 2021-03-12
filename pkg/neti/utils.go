@@ -24,13 +24,26 @@ func DecodeString(buf []byte) (string, error) {
 
 func EncodeStringToBuffer(s string, buffer *bytes.Buffer) error {
 	sb := []byte(s)
-	err := binary.Write(buffer, binary.BigEndian, uint16(len(sb)))
+	return EncodeBytesToBuffer(sb, buffer)
+}
+
+func DecodeStringFromBuffer(buffer *bytes.Buffer) (string, error) {
+	sb, err := DecodeBytesFromBuffer(buffer)
+	if err != nil {
+		return "", err
+	}
+	return string(sb), nil
+}
+
+
+func EncodeBytesToBuffer(b []byte, buffer *bytes.Buffer) error {
+	err := binary.Write(buffer, binary.BigEndian, uint16(len(b)))
 	if err != nil {
 		return err
 	}
-	n, err := buffer.Write(sb)
-	if n != len(sb) {
-		return errors.New(fmt.Sprint("Expected to write", len(sb), "wrote", n))
+	n, err := buffer.Write(b)
+	if n != len(b) {
+		return errors.New(fmt.Sprint("Expected to write", len(b), "wrote", n))
 	}
 	if err != nil {
 		return err
@@ -38,24 +51,23 @@ func EncodeStringToBuffer(s string, buffer *bytes.Buffer) error {
 	return nil
 }
 
-func DecodeStringFromBuffer(buffer *bytes.Buffer) (string, error) {
-	var sLen uint16
-	err := binary.Read(buffer, binary.BigEndian, &sLen)
+func DecodeBytesFromBuffer(buffer *bytes.Buffer) ([]byte, error) {
+	var bLen uint16
+	err := binary.Read(buffer, binary.BigEndian, &bLen)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	sb := make([]byte, sLen)
-	n, err := buffer.Read(sb)
-	if n != int(sLen) {
-		return "", errors.New(fmt.Sprint("Expected to read", sLen, "read", n))
+	b := make([]byte, bLen)
+	n, err := buffer.Read(b)
+	if n != int(bLen) {
+		return nil, errors.New(fmt.Sprint("Expected to read", bLen, "read", n))
 	}
-
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(sb), nil
+	return b, nil
 }
 
 
