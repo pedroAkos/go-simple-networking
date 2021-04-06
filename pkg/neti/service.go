@@ -3,7 +3,8 @@ package neti
 type NetClient interface {
 	RegisterMessage(message Message)
 	Recv() <-chan ReceivedMessage
-	Send(conn HostConn, message Message)
+	SendTo(conn HostConn, message Message) error
+	Open(addr string) (conn HostConn, err error)
 	Self() string
 }
 

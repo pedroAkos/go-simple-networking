@@ -42,6 +42,10 @@ type basicUpdClient struct {
 	rcv chan ReceivedMessage
 }
 
+func (b basicUpdClient) Open(addr string) (conn HostConn, err error) {
+	return b.net.Open(addr)
+}
+
 func (b basicUpdClient) RegisterMessage(message Message) {
 	b.net.RegisterMessage(messageWrap{b.id, message})
 }
@@ -50,8 +54,8 @@ func (b basicUpdClient) Recv() <-chan ReceivedMessage {
 	return b.rcv
 }
 
-func (b basicUpdClient) Send(conn HostConn, message Message) {
-	go b.net.SendTo(conn, message)
+func (b basicUpdClient) SendTo(conn HostConn, message Message) error {
+	return b.net.SendTo(conn, message)
 }
 
 func (b basicUpdClient) Self() string {
