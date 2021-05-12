@@ -21,7 +21,6 @@ func DecodeString(buf []byte) (string, error) {
 	return DecodeStringFromBuffer(b)
 }
 
-
 func EncodeStringToBuffer(s string, buffer *bytes.Buffer) error {
 	sb := []byte(s)
 	return EncodeBytesToBuffer(sb, buffer)
@@ -34,7 +33,6 @@ func DecodeStringFromBuffer(buffer *bytes.Buffer) (string, error) {
 	}
 	return string(sb), nil
 }
-
 
 func EncodeBytesToBuffer(b []byte, buffer *bytes.Buffer) error {
 	err := binary.Write(buffer, binary.BigEndian, uint16(len(b)))
@@ -69,7 +67,6 @@ func DecodeBytesFromBuffer(buffer *bytes.Buffer) ([]byte, error) {
 
 	return b, nil
 }
-
 
 func EncodeNumberToBuffer(n interface{}, buffer *bytes.Buffer) error {
 	return binary.Write(buffer, binary.BigEndian, n)

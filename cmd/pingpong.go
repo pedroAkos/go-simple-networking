@@ -3,13 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/pedroAkos/network/pkg/neti"
 	"log"
 	"os"
 	"time"
+
+	"github.com/pedroAkos/network/pkg/neti"
 )
-
-
 
 func main() {
 
@@ -29,7 +28,7 @@ func main() {
 	go func() {
 		for {
 			select {
-			case conn := <- listener:
+			case conn := <-listener:
 				go func() {
 					for {
 						msg, err := tcp.RecvFrom(conn)
@@ -37,7 +36,7 @@ func main() {
 							log.Panicln(err.Error())
 						}
 						log.Println(fmt.Sprintf("Received msg %s from conn %s", msg.String(), conn.Addr().String()))
-						err = conn.Send(Pong{})
+						err = tcp.SendTo(conn, Ping{})
 						if err != nil {
 							log.Panicln(err.Error())
 						}
@@ -57,7 +56,7 @@ func main() {
 	}
 
 	for {
-		err = conn.Send(Ping{})
+		err = tcp.SendTo(conn, Pong{})
 		if err != nil {
 			log.Panicln(err.Error())
 		}
@@ -67,7 +66,7 @@ func main() {
 		}
 		log.Println(fmt.Sprintf("Received msg %s from conn %s", msg.String(), conn.Addr().String()))
 
-		time.Sleep(time.Second*2)
+		time.Sleep(time.Second * 2)
 	}
 
 }

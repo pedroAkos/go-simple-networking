@@ -3,9 +3,10 @@ package neti
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type MessageDeserializer func([]byte) (Message, error)
@@ -14,6 +15,8 @@ type Message interface {
 	String() string
 	Name() string
 	Code() uint16
+	Sender() []byte
+	Type() bool
 	Serialize() ([]byte, error)
 	Deserialize([]byte) (Message, error)
 }
@@ -40,8 +43,8 @@ type ReceivedConnection struct {
 
 type SentMessage struct {
 	Conn *HostConn
-	Msg Message
-	Err error
+	Msg  Message
+	Err  error
 }
 
 type Net interface {
@@ -55,7 +58,6 @@ type Net interface {
 	SendTo(conn HostConn, m Message) error
 	SendToAsync(conn HostConn, m Message, ch chan<- SentMessage)
 }
-
 
 func writeFully(writer io.Writer, b []byte) error {
 	total := len(b)
@@ -74,7 +76,6 @@ func readFully(reader io.Reader, toRead int) ([]byte, error) {
 	}
 	return b, err
 }
-
 
 //taken from https://gist.github.com/schwarzeni/f25031a3123f895ff3785970921e962c
 func GetInterfaceIpv4Addr(interfaceName string) (addr string, err error) {

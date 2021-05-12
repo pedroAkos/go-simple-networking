@@ -9,9 +9,9 @@ import (
 )
 
 type udpHostConn struct {
-	b []byte
+	b    []byte
 	addr net.Addr
-	conn   net.PacketConn
+	conn net.PacketConn
 }
 
 func (u udpHostConn) String() string {
@@ -27,7 +27,7 @@ func (u udpHostConn) Send(b []byte) error {
 	if n != len(b) && err == nil {
 		return errors.New(fmt.Sprint("Expected to send ", len(b), " bytes, sent ", n))
 	}
-	if err !=  nil {
+	if err != nil {
 		return err
 	}
 	return nil
@@ -37,16 +37,15 @@ func (u udpHostConn) Receive() ([]byte, error) {
 	return u.b, nil
 }
 
-
 func (u udpHostConn) Close() error {
 	return nil
 }
 
 func NewUdpNet(buffsize int) Net {
 	return &udp{
-		conn: nil,
+		conn:             nil,
 		msgDeserializers: make(map[uint16]MessageDeserializer),
-		buffsize: buffsize,
+		buffsize:         buffsize,
 	}
 }
 
@@ -62,7 +61,7 @@ func (u udp) RegisterMessage(message Message) {
 	}
 }
 
-func (u*udp) Listen(addr string) (<-chan HostConn, error) {
+func (u *udp) Listen(addr string) (<-chan HostConn, error) {
 	conn, err := net.ListenPacket("udp", addr)
 	if err != nil {
 		return nil, err
@@ -81,7 +80,7 @@ func (u*udp) Listen(addr string) (<-chan HostConn, error) {
 				ch <- udpHostConn{
 					conn: u.conn,
 					addr: addr,
-					b: p,
+					b:    p,
 				}
 			}
 		}
@@ -105,8 +104,8 @@ func (u udp) Open(addr string) (HostConn, error) {
 	}
 	return udpHostConn{
 		addr: _addr,
-		conn:  u.conn,
-		b: nil,
+		conn: u.conn,
+		b:    nil,
 	}, nil
 
 }
@@ -145,7 +144,6 @@ func (u udp) RecvFrom(conn HostConn) (Message, error) {
 	return u.recvAndDeserialize(conn)
 }
 
-
 func (u udp) SendTo(conn HostConn, message Message) error {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, message.Code())
@@ -160,9 +158,9 @@ func (u udp) SendTo(conn HostConn, message Message) error {
 	if err != nil {
 		return err
 	}
+
 	return conn.Send(buf.Bytes())
 }
-
 
 func (u udp) SendToAsync(conn HostConn, message Message, ch chan<- SentMessage) {
 	go func() {
@@ -170,5 +168,3 @@ func (u udp) SendToAsync(conn HostConn, message Message, ch chan<- SentMessage) 
 		ch <- SentMessage{&conn, message, err}
 	}()
 }
-
-

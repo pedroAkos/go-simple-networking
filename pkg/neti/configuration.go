@@ -2,16 +2,17 @@ package neti
 
 import (
 	"fmt"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 type Configuration struct {
-	iface 	string
-	ip		 	string
-	port 		int
+	iface string
+	ip    string
+	port  int
 
-	buffSize	int
+	buffSize int
 }
 
 func (c Configuration) String() string {
@@ -30,8 +31,8 @@ func LoadConfiguration(viper *viper.Viper) Configuration {
 	c.port = viper.GetInt("net.port")
 	c.iface = viper.GetString("net.iface")
 
-	viper.SetDefault("buffSize", 1024)
-	c.buffSize = viper.GetInt("buffSize")
+	viper.SetDefault("net.buffSize", 1024)
+	c.buffSize = viper.GetInt("net.buffSize")
 
 	if c.ip == "" {
 		var err error

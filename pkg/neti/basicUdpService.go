@@ -2,11 +2,12 @@ package neti
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 )
 
 type messageWrap struct {
-	id uint16
+	id  uint16
 	msg Message
 }
 
@@ -16,6 +17,14 @@ func (m messageWrap) String() string {
 
 func (m messageWrap) Name() string {
 	return m.msg.Name()
+}
+
+func (m messageWrap) Sender() []byte {
+	return m.msg.Sender()
+}
+
+func (m messageWrap) Type() bool {
+	return m.msg.Type()
 }
 
 func (m messageWrap) Code() uint16 {
@@ -36,10 +45,10 @@ func (m messageWrap) Deserialize(bytes []byte) (Message, error) {
 }
 
 type basicUpdClient struct {
-	self * string
-	id uint16
-	net Net
-	rcv chan ReceivedMessage
+	self *string
+	id   uint16
+	net  Net
+	rcv  chan ReceivedMessage
 }
 
 func (b basicUpdClient) Open(addr string) (conn HostConn, err error) {
@@ -62,7 +71,6 @@ func (b basicUpdClient) Self() string {
 	return *b.self
 }
 
-
 func createUpdClient(self *string, id uint16, net Net) *basicUpdClient {
 	return &basicUpdClient{
 		self: self,
@@ -73,9 +81,9 @@ func createUpdClient(self *string, id uint16, net Net) *basicUpdClient {
 }
 
 type basicUdpService struct {
-	self string
-	net Net
-	listeners map[uint16] *basicUpdClient
+	self      string
+	net       Net
+	listeners map[uint16]*basicUpdClient
 }
 
 func (b *basicUdpService) RegisterListener(id uint16) NetClient {
@@ -84,7 +92,7 @@ func (b *basicUdpService) RegisterListener(id uint16) NetClient {
 	return client
 }
 
-func (b *basicUdpService) deliver(msg messageWrap, conn* HostConn, err error) error {
+func (b *basicUdpService) deliver(msg messageWrap, conn *HostConn, err error) error {
 	if err != nil {
 		return err
 	}
@@ -98,7 +106,6 @@ func (b *basicUdpService) deliver(msg messageWrap, conn* HostConn, err error) er
 	}
 	return errors.New(fmt.Sprintf("Listener with id %d is not registered", msg.id))
 }
-
 
 func Init(listenAddr string, buffsize int) NetService {
 	net := NewUdpNet(buffsize)
@@ -114,7 +121,7 @@ func Init(listenAddr string, buffsize int) NetService {
 	go func() {
 		for {
 			select {
-			case conn := <- listen:
+			case conn := <-listen:
 				msg, err := net.RecvFrom(conn)
 				if err = service.deliver(msg.(messageWrap), &conn, err); err != nil {
 					panic(err)
@@ -125,4 +132,3 @@ func Init(listenAddr string, buffsize int) NetService {
 
 	return service
 }
-
