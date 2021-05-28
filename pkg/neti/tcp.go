@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"net"
 )
 
@@ -44,16 +44,18 @@ func (t tcpHostConn) Receive() ([]byte, error) {
 	return readFully(t.conn, int(size))
 }
 
-func NewTcpNet() Net {
+func NewTcpNet(log *logrus.Logger) Net {
 	return &tcp{
 		listener:         nil,
 		msgDeserializers: make(map[uint16]MessageDeserializer),
+		log: log,
 	}
 }
 
 type tcp struct {
 	listener net.Listener
 	msgDeserializers map[uint16]MessageDeserializer
+	log *logrus.Logger
 }
 
 func (t tcp) RegisterMessage(message Message) {
@@ -117,7 +119,7 @@ func (t tcp) RecvFromAsync(conn HostConn, ch chan<- ReceivedMessage) {
 }
 
 func (t tcp) SendTo(conn HostConn, message Message) error {
-	log.WithFields(log.Fields{
+	t.log.WithFields(logrus.Fields{
 		"msg": message,
 		"to": conn.Addr().String(),
 	}).Debug("Sending")

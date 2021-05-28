@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/pedroAkos/network/pkg/neti"
+	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 	"time"
@@ -16,7 +17,7 @@ func main() {
 	host := os.Args[1]
 	target := os.Args[2]
 
-	tcp := neti.NewTcpNet()
+	tcp := neti.NewTcpNet(logrus.StandardLogger())
 
 	listener, err := tcp.Listen(host)
 	if err != nil {
@@ -37,7 +38,7 @@ func main() {
 							log.Panicln(err.Error())
 						}
 						log.Println(fmt.Sprintf("Received msg %s from conn %s", msg.String(), conn.Addr().String()))
-						err = conn.Send(Pong{})
+						err = tcp.SendTo(conn, Pong{})
 						if err != nil {
 							log.Panicln(err.Error())
 						}
@@ -57,7 +58,7 @@ func main() {
 	}
 
 	for {
-		err = conn.Send(Ping{})
+		err = tcp.SendTo(conn, Ping{})
 		if err != nil {
 			log.Panicln(err.Error())
 		}

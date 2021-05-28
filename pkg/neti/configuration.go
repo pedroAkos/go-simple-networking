@@ -2,6 +2,7 @@ package neti
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -12,6 +13,8 @@ type Configuration struct {
 	port 		int
 
 	buffSize	int
+
+	logger		*logrus.Logger
 }
 
 func (c Configuration) String() string {
@@ -22,6 +25,7 @@ func SetPFlags() {
 	pflag.String("net.ip", "", "IP address to bind")
 	pflag.String("net.iface", "lo0", "Network interface to bind")
 	pflag.Int("net.port", 10000, "Port to bind")
+	pflag.String("net.loglvl", "info", "Log Level for network")
 }
 
 func LoadConfiguration(viper *viper.Viper) Configuration {
@@ -30,14 +34,21 @@ func LoadConfiguration(viper *viper.Viper) Configuration {
 	c.port = viper.GetInt("net.port")
 	c.iface = viper.GetString("net.iface")
 
-	viper.SetDefault("buffSize", 1024)
-	c.buffSize = viper.GetInt("buffSize")
+	viper.SetDefault("net.buffSize", 1024)
+	c.buffSize = viper.GetInt("net.buffSize")
 
 	if c.ip == "" {
 		var err error
 		if c.ip, err = GetInterfaceIpv4Addr(c.iface); err != nil {
 			panic(err)
 		}
+	}
+
+	c.logger = logrus.New()
+	level := viper.GetString("net.loglvl")
+	switch level {
+	case "debug":
+		c.logger.Level = logrus.DebugLevel
 	}
 
 	return c
