@@ -61,6 +61,8 @@ type tcp struct {
 func (t tcp) RegisterMessage(message Message) {
 	if _, ok := t.msgDeserializers[message.Code()]; !ok {
 		t.msgDeserializers[message.Code()] = message.Deserialize
+	} else {
+		t.log.Warn(fmt.Sprintf("Message with id: %v already registered, ignoring message: %v", message.Code(), message))
 	}
 }
 

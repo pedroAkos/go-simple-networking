@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net"
 )
 
@@ -59,6 +60,8 @@ type udp struct {
 func (u udp) RegisterMessage(message Message) {
 	if _, ok := u.msgDeserializers[message.Code()]; !ok {
 		u.msgDeserializers[message.Code()] = message.Deserialize
+	} else {
+		log.Warn(fmt.Sprintf("Message with id: %v already registered, ignoring message: %v", message.Code(), message))
 	}
 }
 

@@ -19,7 +19,7 @@ func (m messageWrap) Name() string {
 }
 
 func (m messageWrap) Code() uint16 {
-	return m.msg.Code()
+	return m.msg.Code() + (m.id*100)
 }
 
 func (m messageWrap) Serialize() ([]byte, error) {
@@ -55,7 +55,7 @@ func (b basicUpdClient) Recv() <-chan ReceivedMessage {
 }
 
 func (b basicUpdClient) SendTo(conn HostConn, message Message) error {
-	return b.net.SendTo(conn, message)
+	return b.net.SendTo(conn, messageWrap{id: b.id, msg: message})
 }
 
 func (b basicUpdClient) Self() string {
@@ -100,7 +100,7 @@ func (b *basicUdpService) deliver(msg messageWrap, conn* HostConn, err error) er
 }
 
 
-func Init(listenAddr string, buffsize int) NetService {
+func InitBaseUdpService(listenAddr string, buffsize int) NetService {
 	net := NewUdpNet(buffsize)
 	listen, err := net.Listen(listenAddr)
 	if err != nil {
