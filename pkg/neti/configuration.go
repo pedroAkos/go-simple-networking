@@ -61,3 +61,7 @@ func (c Configuration) Address() string {
 func (c Configuration) BuffSize() int {
 	return c.buffSize
 }
+
+func (c Configuration) WithPort(port int) string {
+	return fmt.Sprintf("%v:%v", c.ip, port)
+}
