@@ -15,7 +15,7 @@ func (m messageWrap) Name() string {
 }
 
 func (m messageWrap) Code() uint16 {
-	return m.msg.Code() + (m.id*100)
+	return m.msg.Code()
 }
 
 func (m messageWrap) Serialize() ([]byte, error) {
