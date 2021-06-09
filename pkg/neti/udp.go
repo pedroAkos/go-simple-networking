@@ -137,7 +137,7 @@ func (u udp) RecvFromAsync(conn HostConn, ch chan<- ReceivedMessage) {
 	go func() {
 		m, err := u.recvAndDeserialize(conn)
 		ch <- ReceivedMessage{
-			Conn: &conn,
+			Conn: conn,
 			Msg:  m,
 			Err:  err,
 		}
@@ -151,8 +151,7 @@ func (u udp) RecvFrom(conn HostConn) (Message, error) {
 
 func (u udp) SendTo(conn HostConn, message Message) error {
 	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, message.Code())
-	if err != nil {
+	if err := binary.Write(buf, binary.BigEndian, message.Code()); err != nil {
 		return err
 	}
 	payload, err := message.Serialize()
@@ -170,7 +169,7 @@ func (u udp) SendTo(conn HostConn, message Message) error {
 func (u udp) SendToAsync(conn HostConn, message Message, ch chan<- SentMessage) {
 	go func() {
 		err := u.SendTo(conn, message)
-		ch <- SentMessage{&conn, message, err}
+		ch <- SentMessage{conn, message, err}
 	}()
 }
 

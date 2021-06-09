@@ -9,17 +9,21 @@ import (
 
 type basicTcpClient struct {
 	self * string
-	id uint16
+	id string
 	net Net
 	rcv chan ReceivedMessage
-	acpt chan HostConn
+	acpt chan *ServiceHostConn
+}
+
+func (b *basicTcpClient) ServiceId() string {
+	return b.id
 }
 
 func (b *basicTcpClient) Type() TransportType {
 	return TCP
 }
 
-func (b *basicTcpClient) Accept() <-chan HostConn {
+func (b *basicTcpClient) Accept() <-chan *ServiceHostConn {
 	return b.acpt
 }
 
@@ -27,16 +31,33 @@ func (b *basicTcpClient) RegisterMessage(message Message) {
 	b.net.RegisterMessage(messageWrap{b.id, message})
 }
 
-func (b *basicTcpClient) RecvFrom(conn HostConn) (Message, error) {
+func (b *basicTcpClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
 	return b.net.RecvFrom(conn)
 }
 
-func (b *basicTcpClient) SendTo(conn HostConn, message Message) error {
+func (b *basicTcpClient) SendTo(conn *ServiceHostConn, message Message) error {
 	return b.net.SendTo(conn, messageWrap{id: b.id, msg: message})
 }
 
-func (b *basicTcpClient) Open(addr string) (conn HostConn, err error) {
-	return b.net.Open(addr)
+func (b *basicTcpClient) OpenTo(addr string, id string) (*ServiceHostConn, error) {
+	if conn, err := b.net.Open(addr); err == nil {
+		buff := new(bytes.Buffer)
+		if err = EncodeStringToBuffer(id, buff); err != nil {
+			return nil, err
+		}
+		if err = EncodeStringToBuffer(b.id, buff); err != nil {
+			return nil, err
+		}
+		if err = conn.Send(buff.Bytes()); err != nil {
+			return nil, err
+		}
+		if _, err = conn.Receive(); err != nil {
+			return nil, err
+		}
+		return &ServiceHostConn{ServiceId: id, Conn: conn}, err
+	} else {
+		return nil, err
+	}
 }
 
 func (b *basicTcpClient) Self() string {
@@ -44,20 +65,20 @@ func (b *basicTcpClient) Self() string {
 }
 
 
-func createTcpClient(self *string, id uint16, net Net) *basicTcpClient {
+func createTcpClient(self *string, id string, net Net) *basicTcpClient {
 	return &basicTcpClient{
 		self: self,
 		id:   id,
 		net:  net,
 		rcv:  make(chan ReceivedMessage),
-		acpt: make(chan HostConn),
+		acpt: make(chan *ServiceHostConn),
 	}
 }
 
 type basicTcpService struct {
 	self string
 	net Net
-	listeners map[uint16]  *basicTcpClient
+	listeners map[string]  *basicTcpClient
 
 	logger *log.Logger
 }
@@ -71,7 +92,7 @@ func (b *basicTcpService) GetConfiguration() Configuration {
 	}
 }
 
-func (b *basicTcpService) RegisterListener(id uint16) NetClient {
+func (b *basicTcpService) RegisterListener(id string) NetClient {
 	client := createTcpClient(&b.self, id, b.net)
 	b.listeners[id] = client
 	return client
@@ -79,12 +100,17 @@ func (b *basicTcpService) RegisterListener(id uint16) NetClient {
 
 
 func (b *basicTcpService) accept(bid []byte, conn HostConn) {
-	var id uint16;
-	if err := DecodeNumberFromBuffer(&id, bytes.NewBuffer(bid)); err != nil {
+	buff := bytes.NewBuffer(bid)
+	if id, err := DecodeStringFromBuffer(buff); err != nil {
 		b.logger.Error(err)
 	} else if c, ok := b.listeners[id]; ok {
-		c.acpt <- conn
+		if id, err = DecodeStringFromBuffer(buff); err != nil {
+			b.logger.Error(err)
+		} else {
+			c.acpt <- &ServiceHostConn{conn, id, nil}
+		}
 	} else {
+		_ = conn.Close()
 		b.logger.Error("Received connection for ", id, ", but don't have listener registered")
 	}
 }
@@ -99,7 +125,7 @@ func InitBaseTcpService(listenAddr string, logger *log.Logger) NetService {
 	service := &basicTcpService{
 		self:      listenAddr,
 		net:       net,
-		listeners: make(map[uint16]*basicTcpClient),
+		listeners: make(map[string]*basicTcpClient),
 	}
 	go func() {
 		for {

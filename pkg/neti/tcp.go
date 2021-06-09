@@ -12,6 +12,11 @@ import (
 
 type tcpHostConn struct {
 	conn net.Conn
+	serviceId string
+}
+
+func (t tcpHostConn) ServiceId() string {
+	return t.serviceId
 }
 
 func (t tcpHostConn) String() string {
@@ -113,7 +118,7 @@ func (t tcp) RecvFromAsync(conn HostConn, ch chan<- ReceivedMessage) {
 	go func() {
 		m, err := t.recvAndDeserialize(conn)
 		ch <- ReceivedMessage{
-			Conn:  &conn,
+			Conn:  conn,
 			Msg:   m,
 			Err: err,
 		}
@@ -141,7 +146,7 @@ func (t tcp) SendTo(conn HostConn, message Message) error {
 func (t tcp) SendToAsync(conn HostConn, message Message, ch chan<- SentMessage) {
 	go func() {
 		err := t.SendTo(conn, message)
-		ch <- SentMessage{&conn, message, err}
+		ch <- SentMessage{conn, message, err}
 	}()
 }
 

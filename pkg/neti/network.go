@@ -27,7 +27,7 @@ type HostConn interface {
 }
 
 type ReceivedMessage struct {
-	Conn *HostConn
+	Conn HostConn
 	Msg  Message
 	Err  error
 }
@@ -39,7 +39,7 @@ type ReceivedConnection struct {
 }
 
 type SentMessage struct {
-	Conn *HostConn
+	Conn HostConn
 	Msg Message
 	Err error
 }

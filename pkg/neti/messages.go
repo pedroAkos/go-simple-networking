@@ -1,8 +1,9 @@
 package neti
 
+import "bytes"
 
 type messageWrap struct {
-	id uint16
+	id string
 	msg Message
 }
 
@@ -19,11 +20,25 @@ func (m messageWrap) Code() uint16 {
 }
 
 func (m messageWrap) Serialize() ([]byte, error) {
-	return m.msg.Serialize()
+	buff := new(bytes.Buffer)
+	if err := EncodeStringToBuffer(m.id, buff); err != nil {
+		return nil, err
+	}
+	if b, err := m.msg.Serialize(); err != nil {
+		return nil, err
+	} else if n, err :=  buff.Write(b); n != len(b) || err != nil {
+		return nil, err
+	}
+	return buff.Bytes(), nil
 }
 
-func (m messageWrap) Deserialize(bytes []byte) (Message, error) {
-	msg, err := m.msg.Deserialize(bytes)
+func (m messageWrap) Deserialize(b []byte) (Message, error) {
+	buff := bytes.NewBuffer(b)
+	var err error
+	if m.id, err = DecodeStringFromBuffer(buff); err != nil {
+		return nil, err
+	}
+	msg, err := m.msg.Deserialize(buff.Bytes())
 	if err != nil {
 		return nil, err
 	}

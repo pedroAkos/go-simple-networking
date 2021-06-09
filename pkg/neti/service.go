@@ -1,5 +1,11 @@
 package neti
 
+import (
+	"bytes"
+	"fmt"
+	"net"
+)
+
 type TransportType uint8
 
 const (
@@ -9,16 +15,59 @@ const (
 
 type NetClient interface {
 	RegisterMessage(message Message)
-	RecvFrom(conn HostConn) (Message, error)
-	SendTo(conn HostConn, message Message) error
-	Open(addr string) (conn HostConn, err error)
-	Accept() <-chan HostConn
+	RecvFrom(conn *ServiceHostConn) (Message, error)
+	SendTo(conn *ServiceHostConn, message Message) error
+	OpenTo(addr string, id string) (*ServiceHostConn, error)
+	Accept() <-chan *ServiceHostConn
 	Self() string
 	Type() TransportType
+	ServiceId() string
 }
 
 type NetService interface {
-	RegisterListener(id uint16) NetClient
+	RegisterListener(id string) NetClient
 	GetConfiguration() Configuration
 }
+
+type ServiceHostConn struct {
+	Conn HostConn
+	ServiceId string
+	Msg Message
+}
+
+func (s *ServiceHostConn) String() string {
+	return fmt.Sprintf("%v %v", s.ServiceId, s.Conn.String())
+}
+
+func (s *ServiceHostConn) Addr() net.Addr {
+	return s.Conn.Addr()
+}
+
+func (s *ServiceHostConn) Send(b []byte) error {
+	buff := new(bytes.Buffer)
+	if err := EncodeStringToBuffer(s.ServiceId, buff); err != nil {
+		return err
+	}
+	if err := EncodeBytesToBuffer(b, buff); err != nil {
+		return err
+	}
+	return s.Conn.Send(buff.Bytes())
+}
+
+func (s *ServiceHostConn) Receive() ([]byte, error) {
+	b, err := s.Conn.Receive()
+	buff := bytes.NewBuffer(b)
+	if s.ServiceId, err = DecodeStringFromBuffer(buff); err != nil {
+		return nil, err
+	}
+	if b, err = DecodeBytesFromBuffer(buff); err != nil {
+		return nil, err
+	}
+	return b, err
+}
+
+func (s *ServiceHostConn) Close() error {
+	return s.Conn.Close()
+}
+
 
