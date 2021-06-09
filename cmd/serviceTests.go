@@ -63,7 +63,8 @@ func main() {
 
 	log.SetLevel(log.DebugLevel)
 
-	netserv := neti.InitBaseUdpService(*listenAddr, 1024)
+	//netserv := neti.InitBaseUdpService(*listenAddr, 1024)
+	netserv := neti.InitBaseTcpService(*listenAddr, log.StandardLogger())
 
 	client1ID := "client1"
 	client2ID := "client2"
@@ -99,6 +100,7 @@ func clientRcvLoop(client neti.NetClient) {
 	for {
 		select {
 		case conn := <- client.Accept():
+			log.Info(client.ServiceId(), ": Accepted: ", conn)
 			if m, err := client.RecvFrom(conn); err != nil {
 				log.Error(client.ServiceId(), ": ", err)
 			} else {
@@ -112,6 +114,9 @@ func clientRcvLoop(client neti.NetClient) {
 					}
 				}
 			}
+			if err := conn.Close(); err != nil {
+				log.Error(client.ServiceId(), ": ", err)
+			}
 		}
 	}
 }
@@ -122,6 +127,7 @@ func clientSendLoop(client neti.NetClient, dst string, dstId string, mark string
 		select {
 		case <- time.After(1*time.Second):
 			if conn, err := client.OpenTo(dst, dstId); err == nil {
+				log.Info(client.ServiceId(), ": Opened: ", conn, " to: ", dstId)
 				m := msg{1, mark, uint32(i)}
 				if err = client.SendTo(conn, m); err != nil {
 					log.Error(client.ServiceId(), ": ", err)

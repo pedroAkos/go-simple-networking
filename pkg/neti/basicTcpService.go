@@ -32,7 +32,9 @@ func (b *basicTcpClient) RegisterMessage(message Message) {
 }
 
 func (b *basicTcpClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
-	return b.net.RecvFrom(conn)
+	m, err := b.net.RecvFrom(conn)
+	msg := m.(messageWrap)
+	return msg.msg, err
 }
 
 func (b *basicTcpClient) SendTo(conn *ServiceHostConn, message Message) error {
@@ -41,6 +43,7 @@ func (b *basicTcpClient) SendTo(conn *ServiceHostConn, message Message) error {
 
 func (b *basicTcpClient) OpenTo(addr string, id string) (*ServiceHostConn, error) {
 	if conn, err := b.net.Open(addr); err == nil {
+
 		buff := new(bytes.Buffer)
 		if err = EncodeStringToBuffer(id, buff); err != nil {
 			return nil, err
@@ -100,6 +103,7 @@ func (b *basicTcpService) RegisterListener(id string) NetClient {
 
 
 func (b *basicTcpService) accept(bid []byte, conn HostConn) {
+	b.logger.Debug("Accepting: ", conn)
 	buff := bytes.NewBuffer(bid)
 	if id, err := DecodeStringFromBuffer(buff); err != nil {
 		b.logger.Error(err)
@@ -107,7 +111,12 @@ func (b *basicTcpService) accept(bid []byte, conn HostConn) {
 		if id, err = DecodeStringFromBuffer(buff); err != nil {
 			b.logger.Error(err)
 		} else {
-			c.acpt <- &ServiceHostConn{conn, id, nil}
+			if err := conn.Send([]byte{}); err != nil {
+				b.logger.Error(err)
+				_ = conn.Close()
+			} else {
+				c.acpt <- &ServiceHostConn{conn, id, nil}
+			}
 		}
 	} else {
 		_ = conn.Close()
@@ -126,6 +135,7 @@ func InitBaseTcpService(listenAddr string, logger *log.Logger) NetService {
 		self:      listenAddr,
 		net:       net,
 		listeners: make(map[string]*basicTcpClient),
+		logger: logger,
 	}
 	go func() {
 		for {
