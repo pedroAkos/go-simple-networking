@@ -21,7 +21,7 @@ type NetClient interface {
 	Accept() <-chan *ServiceHostConn
 	Self() string
 	Type() TransportType
-	ServiceId() string
+	Id() string
 }
 
 type NetService interface {
@@ -33,6 +33,7 @@ type ServiceHostConn struct {
 	Conn HostConn
 	ServiceId string
 	Msg Message
+
 }
 
 func (s *ServiceHostConn) String() string {
@@ -51,7 +52,8 @@ func (s *ServiceHostConn) Send(b []byte) error {
 	if err := EncodeBytesToBuffer(b, buff); err != nil {
 		return err
 	}
-	return s.Conn.Send(buff.Bytes())
+	b = buff.Bytes()
+	return s.Conn.Send(b)
 }
 
 func (s *ServiceHostConn) Receive() ([]byte, error) {
@@ -59,6 +61,9 @@ func (s *ServiceHostConn) Receive() ([]byte, error) {
 	buff := bytes.NewBuffer(b)
 	if s.ServiceId, err = DecodeStringFromBuffer(buff); err != nil {
 		return nil, err
+	}
+	if s.ServiceId == "" {
+		panic("Service Id is empty")
 	}
 	if b, err = DecodeBytesFromBuffer(buff); err != nil {
 		return nil, err
@@ -69,5 +74,3 @@ func (s *ServiceHostConn) Receive() ([]byte, error) {
 func (s *ServiceHostConn) Close() error {
 	return s.Conn.Close()
 }
-
-

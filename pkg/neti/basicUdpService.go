@@ -22,7 +22,7 @@ func (b *basicUpdClient) Accept() <-chan *ServiceHostConn {
 	return b.listenCh
 }
 
-func (b *basicUpdClient) ServiceId() string {
+func (b *basicUpdClient) Id() string {
 	return b.id
 }
 
@@ -39,7 +39,7 @@ func (b *basicUpdClient) OpenTo(addr string, serviceId string) (*ServiceHostConn
 }
 
 func (b *basicUpdClient) RegisterMessage(message Message) {
-	b.net.RegisterMessage(messageWrap{b.id, message})
+	b.net.RegisterMessage(MessageWrap{b.id, message})
 }
 
 func (b *basicUpdClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
@@ -51,7 +51,7 @@ func (b *basicUpdClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
 }
 
 func (b *basicUpdClient) SendTo(conn *ServiceHostConn, message Message) error {
-	return b.net.SendTo(conn, messageWrap{id: b.id, msg: message})
+	return b.net.SendTo(conn, MessageWrap{Id: b.id, Msg: message})
 }
 
 func (b *basicUpdClient) Self() string {
@@ -89,17 +89,17 @@ func (b *basicUdpService) RegisterListener(id string) NetClient {
 	return client
 }
 
-func (b *basicUdpService) deliver(msg messageWrap, conn* ServiceHostConn, err error) error {
+func (b *basicUdpService) deliver(msg MessageWrap, conn* ServiceHostConn, err error) error {
 	if err != nil {
 		return err
 	}
 	if c, ok := b.listeners[conn.ServiceId]; ok {
-		conn.ServiceId = msg.id
-		conn.Msg = msg.msg
+		conn.ServiceId = msg.Id
+		conn.Msg = msg.Msg
 		c.listenCh <- conn
 		return nil
 	}
-	return errors.New(fmt.Sprintf("Listener with id %d is not registered", msg.id))
+	return errors.New(fmt.Sprintf("Listener with Id %d is not registered", msg.Id))
 }
 
 
@@ -120,7 +120,7 @@ func InitBaseUdpService(listenAddr string, buffsize int) NetService {
 			case c := <- listen:
 				conn := &ServiceHostConn{Conn: c}
 				msg, err := net.RecvFrom(conn)
-				if err = service.deliver(msg.(messageWrap), conn, err); err != nil {
+				if err = service.deliver(msg.(MessageWrap), conn, err); err != nil {
 					panic(err)
 				}
 			}

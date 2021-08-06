@@ -15,7 +15,7 @@ type basicTcpClient struct {
 	acpt chan *ServiceHostConn
 }
 
-func (b *basicTcpClient) ServiceId() string {
+func (b *basicTcpClient) Id() string {
 	return b.id
 }
 
@@ -28,17 +28,21 @@ func (b *basicTcpClient) Accept() <-chan *ServiceHostConn {
 }
 
 func (b *basicTcpClient) RegisterMessage(message Message) {
-	b.net.RegisterMessage(messageWrap{b.id, message})
+	b.net.RegisterMessage(MessageWrap{b.id, message})
 }
 
 func (b *basicTcpClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
 	m, err := b.net.RecvFrom(conn)
-	msg := m.(messageWrap)
-	return msg.msg, err
+	if err == nil {
+		msg := m.(MessageWrap)
+		return msg.Msg, err
+	} else {
+		return nil, err
+	}
 }
 
 func (b *basicTcpClient) SendTo(conn *ServiceHostConn, message Message) error {
-	return b.net.SendTo(conn, messageWrap{id: b.id, msg: message})
+	return b.net.SendTo(conn, MessageWrap{Id: b.id, Msg: message})
 }
 
 func (b *basicTcpClient) OpenTo(addr string, id string) (*ServiceHostConn, error) {

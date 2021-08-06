@@ -70,7 +70,8 @@ func readFully(reader io.Reader, toRead int) ([]byte, error) {
 	b := make([]byte, toRead)
 	n, err := reader.Read(b)
 	if n != toRead {
-		log.Warn("Expected to read ", toRead, " read ", n)
+		//log.Warn("Expected to read ", toRead, " read ", n)
+		log.Panicln("Expected to read ", toRead, " read ", n)
 	}
 	return b, err
 }

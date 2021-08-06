@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 )
 
 func EncodeString(s string) ([]byte, error) {
@@ -43,7 +44,7 @@ func EncodeBytesToBuffer(b []byte, buffer *bytes.Buffer) error {
 	}
 	n, err := buffer.Write(b)
 	if n != len(b) {
-		return errors.New(fmt.Sprint("Expected to write", len(b), "wrote", n))
+		return errors.New(fmt.Sprint("Expected to write ", len(b), " wrote ", n))
 	}
 	if err != nil {
 		return err
@@ -61,7 +62,8 @@ func DecodeBytesFromBuffer(buffer *bytes.Buffer) ([]byte, error) {
 	b := make([]byte, bLen)
 	n, err := buffer.Read(b)
 	if n != int(bLen) {
-		return nil, errors.New(fmt.Sprint("Expected to read", bLen, "read", n))
+		log.Panic("Expected to read ", bLen, " read ", n)
+		return nil, errors.New(fmt.Sprint("Expected to read ", bLen, " read ", n))
 	}
 	if err != nil {
 		return nil, err

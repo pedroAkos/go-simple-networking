@@ -61,7 +61,7 @@ func (u udp) RegisterMessage(message Message) {
 	if _, ok := u.msgDeserializers[message.Code()]; !ok {
 		u.msgDeserializers[message.Code()] = message.Deserialize
 	} else {
-		log.Warn(fmt.Sprintf("Message with id: %v already registered, ignoring message: %v", message.Code(), message))
+		log.Warn(fmt.Sprintf("Message with Id: %v already registered, ignoring message: %v", message.Code(), message))
 	}
 }
 
@@ -130,7 +130,7 @@ func (u udp) recvAndDeserialize(conn HostConn) (Message, error) {
 	if d, ok := u.msgDeserializers[code]; ok {
 		return d(b[binary.Size(code):])
 	}
-	return nil, errors.New(fmt.Sprintln("Unknown msg code", code))
+	return nil, errors.New(fmt.Sprintln("Unknown Msg code", code))
 }
 
 func (u udp) RecvFromAsync(conn HostConn, ch chan<- ReceivedMessage) {

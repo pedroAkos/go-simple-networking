@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
+	"sync"
 )
 
 
 type tcpHostConn struct {
 	conn net.Conn
 	serviceId string
+	sendLock *sync.Mutex
 }
 
 func (t tcpHostConn) ServiceId() string {
@@ -28,6 +30,8 @@ func (t tcpHostConn) Addr() net.Addr {
 }
 
 func (t tcpHostConn) Send(b []byte) error {
+	t.sendLock.Lock()
+	defer t.sendLock.Unlock()
 	err := binary.Write(t.conn, binary.BigEndian, uint32(len(b)))
 	if err != nil {
 		return err
@@ -67,7 +71,7 @@ func (t tcp) RegisterMessage(message Message) {
 	if _, ok := t.msgDeserializers[message.Code()]; !ok {
 		t.msgDeserializers[message.Code()] = message.Deserialize
 	} else {
-		t.log.Warn(fmt.Sprintf("Message with id: %v already registered, ignoring message: %v", message.Code(), message))
+		t.log.Warn(fmt.Sprintf("Message with Id: %v already registered, ignoring message: %v", message.Code(), message))
 	}
 }
 
@@ -81,7 +85,7 @@ func (t tcp) Open(addr string) (HostConn, error) {
 		return nil, err
 	}
 
-	hConn := tcpHostConn{conn: conn}
+	hConn := tcpHostConn{conn: conn, sendLock: &sync.Mutex{}}
 
 	return hConn, err
 }
@@ -107,7 +111,7 @@ func (t tcp) recvAndDeserialize(conn HostConn) (Message, error) {
 	if d, ok := t.msgDeserializers[code]; ok {
 		return d(b[binary.Size(code):])
 	}
-	return nil, errors.New(fmt.Sprintln("Unknown msg code", code))
+	return nil, errors.New(fmt.Sprintln("Unknown Msg code", code))
 }
 
 func (t tcp) RecvFrom(conn HostConn) (Message, error) {
@@ -126,10 +130,6 @@ func (t tcp) RecvFromAsync(conn HostConn, ch chan<- ReceivedMessage) {
 }
 
 func (t tcp) SendTo(conn HostConn, message Message) error {
-	t.log.WithFields(logrus.Fields{
-		"msg": message,
-		"to": conn.Addr().String(),
-	}).Debug("Sending")
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, message.Code())
 	if err != nil {
@@ -140,6 +140,11 @@ func (t tcp) SendTo(conn HostConn, message Message) error {
 		return err
 	}
 	err = writeFully(buf, payload)
+	t.log.WithFields(logrus.Fields{
+		"Msg": message,
+		"to": conn.Addr().String(),
+		"size": len(payload),
+	}).Debug("Sending")
 	return conn.Send(buf.Bytes())
 }
 
@@ -169,6 +174,7 @@ func (t *tcp) Listen(addr string) (<-chan HostConn, error) {
 			} else {
 				ch <- tcpHostConn{
 					conn: conn,
+					sendLock: &sync.Mutex{},
 				}
 			}
 		}
