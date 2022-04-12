@@ -19,27 +19,21 @@ func (m MessageWrap) Code() uint16 {
 	return m.Msg.Code()
 }
 
-func (m MessageWrap) Serialize() ([]byte, error) {
-	buff := new(bytes.Buffer)
-	if err := EncodeStringToBuffer(m.Id, buff); err != nil {
-		return nil, err
+func (m MessageWrap) Serialize(buff *bytes.Buffer) error {
+	_ = EncodeStringToBuffer(m.Id, buff)
+	if err := m.Msg.Serialize(buff); err != nil {
+		panic(err)
+		return err
 	}
-	if b, err := m.Msg.Serialize(); err != nil {
-		return nil, err
-	} else if n, err :=  buff.Write(b); n != len(b) || err != nil {
-		return nil, err
-	}
-	return buff.Bytes(), nil
+
+	return nil
 }
 
-func (m MessageWrap) Deserialize(b []byte) (Message, error) {
-	buff := bytes.NewBuffer(b)
-	var err error
-	if m.Id, err = DecodeStringFromBuffer(buff); err != nil {
-		return nil, err
-	}
-	msg, err := m.Msg.Deserialize(buff.Bytes())
+func (m MessageWrap) Deserialize(buff *bytes.Buffer) (Message, error) {
+	m.Id, _ = DecodeStringFromBuffer(buff)
+	msg, err := m.Msg.Deserialize(buff)
 	if err != nil {
+		panic(err)
 		return nil, err
 	}
 	m.Msg = msg

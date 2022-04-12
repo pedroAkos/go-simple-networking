@@ -13,13 +13,13 @@ import (
 )
 
 type msg struct {
-	code uint16
-	mark string
+	code   uint16
+	mark   string
 	seqnum uint32
 }
 
 func (m msg) String() string {
-	return fmt.Sprintf("%v{%v-%v%v}", m.Name(),m.code, m.mark, m.seqnum)
+	return fmt.Sprintf("%v{%v-%v%v}", m.Name(), m.code, m.mark, m.seqnum)
 }
 
 func (m msg) Name() string {
@@ -30,27 +30,15 @@ func (m msg) Code() uint16 {
 	return m.code
 }
 
-func (m msg) Serialize() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	if err := neti.EncodeStringToBuffer(m.mark, buf); err != nil {
-		return nil, err
-	}
-	if err := neti.EncodeNumberToBuffer(m.seqnum, buf); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+func (m msg) Serialize(buf *bytes.Buffer) error {
+	_ = neti.EncodeStringToBuffer(m.mark, buf)
+	_ = neti.EncodeNumberToBuffer(m.seqnum, buf)
+	return nil
 }
 
-func (m msg) Deserialize(b []byte) (neti.Message, error) {
-	buf := bytes.NewBuffer(b)
-	var err error
-	if m.mark, err = neti.DecodeStringFromBuffer(buf); err != nil {
-		return nil, err
-	}
-	if err = neti.DecodeNumberFromBuffer(&m.seqnum, buf); err != nil {
-		return nil, err
-	}
-	fmt.Println(m)
+func (m msg) Deserialize(buf *bytes.Buffer) (neti.Message, error) {
+	m.mark, _ = neti.DecodeStringFromBuffer(buf)
+	_ = neti.DecodeNumberFromBuffer(&m.seqnum, buf)
 	return m, nil
 }
 
@@ -91,7 +79,6 @@ func main() {
 		go clientSendLoop(client2, *dstAddr, client2ID, "D")
 	}
 
-
 	<-stop
 
 }
@@ -99,23 +86,23 @@ func main() {
 func clientRcvLoop(client neti.NetClient) {
 	for {
 		select {
-		case conn := <- client.Accept():
-			log.Info(client.ServiceId(), ": Accepted: ", conn)
+		case conn := <-client.Accept():
+			log.Info(client.Id(), ": Accepted: ", conn)
 			if m, err := client.RecvFrom(conn); err != nil {
-				log.Error(client.ServiceId(), ": ", err)
+				log.Error(client.Id(), ": ", err)
 			} else {
-				log.Info(client.ServiceId(),": Received: ", m.String(), " from: ", conn.ServiceId)
+				log.Info(client.Id(), ": Received: ", m.String(), " from: ", conn.ServiceId)
 				if m.Code() == 1 {
 					m2 := m.(msg)
 					m2.code = 2
 					err := client.SendTo(conn, m2)
 					if err != nil {
-						log.Error(client.ServiceId(), ": ", err)
+						log.Error(client.Id(), ": ", err)
 					}
 				}
 			}
 			if err := conn.Close(); err != nil {
-				log.Error(client.ServiceId(), ": ", err)
+				log.Error(client.Id(), ": ", err)
 			}
 		}
 	}
@@ -125,17 +112,17 @@ func clientSendLoop(client neti.NetClient, dst string, dstId string, mark string
 	i := 0
 	for {
 		select {
-		case <- time.After(1*time.Second):
+		case <-time.After(1 * time.Second):
 			if conn, err := client.OpenTo(dst, dstId); err == nil {
-				log.Info(client.ServiceId(), ": Opened: ", conn, " to: ", dstId)
+				log.Info(client.Id(), ": Opened: ", conn, " to: ", dstId)
 				m := msg{1, mark, uint32(i)}
 				if err = client.SendTo(conn, m); err != nil {
-					log.Error(client.ServiceId(), ": ", err)
+					log.Error(client.Id(), ": ", err)
 				}
-				log.Info(client.ServiceId(), ": Sent: ", m, " to: ", dstId)
+				log.Info(client.Id(), ": Sent: ", m, " to: ", dstId)
 				i++
 			} else {
-				log.Error(client.ServiceId(), ": ", err)
+				log.Error(client.Id(), ": ", err)
 			}
 		}
 	}

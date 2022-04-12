@@ -3,14 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/pedroAkos/network/cmd/pingpong"
 	"github.com/pedroAkos/network/pkg/neti"
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 	"time"
 )
-
-
 
 func main() {
 
@@ -24,13 +23,13 @@ func main() {
 		log.Panicln(err.Error())
 	}
 
-	tcp.RegisterMessage(Ping{})
-	tcp.RegisterMessage(Pong{})
+	tcp.RegisterMessage(pingpong.Ping{})
+	tcp.RegisterMessage(pingpong.Pong{})
 
 	go func() {
 		for {
 			select {
-			case conn := <- listener:
+			case conn := <-listener:
 				go func() {
 					for {
 						msg, err := tcp.RecvFrom(conn)
@@ -38,7 +37,7 @@ func main() {
 							log.Panicln(err.Error())
 						}
 						log.Println(fmt.Sprintf("Received msg %s from conn %s", msg.String(), conn.Addr().String()))
-						err = tcp.SendTo(conn, Pong{})
+						err = tcp.SendTo(conn, pingpong.Pong{})
 						if err != nil {
 							log.Panicln(err.Error())
 						}
@@ -58,7 +57,7 @@ func main() {
 	}
 
 	for {
-		err = tcp.SendTo(conn, Ping{})
+		err = tcp.SendTo(conn, pingpong.Ping{})
 		if err != nil {
 			log.Panicln(err.Error())
 		}
@@ -68,7 +67,7 @@ func main() {
 		}
 		log.Println(fmt.Sprintf("Received msg %s from conn %s", msg.String(), conn.Addr().String()))
 
-		time.Sleep(time.Second*2)
+		time.Sleep(time.Second * 2)
 	}
 
 }

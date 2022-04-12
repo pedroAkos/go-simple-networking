@@ -14,14 +14,14 @@ const (
 )
 
 type NetClient interface {
-	RegisterMessage(message Message)
-	RecvFrom(conn *ServiceHostConn) (Message, error)
-	SendTo(conn *ServiceHostConn, message Message) error
-	OpenTo(addr string, id string) (*ServiceHostConn, error)
-	Accept() <-chan *ServiceHostConn
-	Self() string
-	Type() TransportType
-	Id() string
+	RegisterMessage(message Message)                         //Register Message in the NetClient (Known how to deserialize)
+	RecvFrom(conn *ServiceHostConn) (Message, error)         //Receive Message from ServiceHostConn
+	SendTo(conn *ServiceHostConn, message Message) error     //Send Message to ServiceHostConn
+	OpenTo(addr string, id string) (*ServiceHostConn, error) //Open ServiceHostConn to peer with addr to NetClient ID
+	Accept() <-chan *ServiceHostConn                         //Accept Connection
+	Self() string                                            //Self Address
+	Type() TransportType                                     //Transport Type
+	Id() string                                              //ID of NetClient
 }
 
 type NetService interface {
@@ -30,10 +30,9 @@ type NetService interface {
 }
 
 type ServiceHostConn struct {
-	Conn HostConn
+	Conn      HostConn
 	ServiceId string
-	Msg Message
-
+	Msg       Message
 }
 
 func (s *ServiceHostConn) String() string {
@@ -52,8 +51,7 @@ func (s *ServiceHostConn) Send(b []byte) error {
 	if err := EncodeBytesToBuffer(b, buff); err != nil {
 		return err
 	}
-	b = buff.Bytes()
-	return s.Conn.Send(b)
+	return s.Conn.Send(buff.Bytes())
 }
 
 func (s *ServiceHostConn) Receive() ([]byte, error) {
@@ -65,10 +63,7 @@ func (s *ServiceHostConn) Receive() ([]byte, error) {
 	if s.ServiceId == "" {
 		panic("Service Id is empty")
 	}
-	if b, err = DecodeBytesFromBuffer(buff); err != nil {
-		return nil, err
-	}
-	return b, err
+	return DecodeBytesFromBuffer(buff)
 }
 
 func (s *ServiceHostConn) Close() error {

@@ -7,11 +7,10 @@ import (
 	"strings"
 )
 
-
 type basicUpdClient struct {
-	self * string
-	id string
-	net Net
+	self *string
+	id   string
+	net  Net
 	//rcv chan ReceivedMessage
 	listenCh chan *ServiceHostConn
 
@@ -31,7 +30,7 @@ func (b *basicUpdClient) Type() TransportType {
 }
 
 func (b *basicUpdClient) OpenTo(addr string, serviceId string) (*ServiceHostConn, error) {
-	if conn, err :=  b.net.Open(addr); err != nil {
+	if conn, err := b.net.Open(addr); err != nil {
 		return nil, err
 	} else {
 		return &ServiceHostConn{conn, serviceId, nil}, err
@@ -44,7 +43,7 @@ func (b *basicUpdClient) RegisterMessage(message Message) {
 
 func (b *basicUpdClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
 	if conn.Msg != nil {
-		defer func() {conn.Msg = nil}()
+		defer func() { conn.Msg = nil }()
 		return conn.Msg, nil
 	}
 	return nil, errors.New(fmt.Sprintf("Nothing to receive from connection"))
@@ -60,25 +59,25 @@ func (b *basicUpdClient) Self() string {
 
 func createUpdClient(self *string, id string, net Net) *basicUpdClient {
 	return &basicUpdClient{
-		self: self,
-		id:   id,
-		net:  net,
-		listenCh:  make(chan *ServiceHostConn),
+		self:     self,
+		id:       id,
+		net:      net,
+		listenCh: make(chan *ServiceHostConn),
 		buffered: make(map[string][]ReceivedMessage),
 	}
 }
 
 type basicUdpService struct {
-	self string
-	net Net
-	listeners map[string] *basicUpdClient
+	self      string
+	net       Net
+	listeners map[string]*basicUpdClient
 }
 
 func (b *basicUdpService) GetConfiguration() Configuration {
 	parts := strings.Split(b.self, ":")
 	port, _ := strconv.Atoi(parts[1])
 	return Configuration{
-		ip: parts[0],
+		ip:   parts[0],
 		port: port,
 	}
 }
@@ -89,7 +88,7 @@ func (b *basicUdpService) RegisterListener(id string) NetClient {
 	return client
 }
 
-func (b *basicUdpService) deliver(msg MessageWrap, conn* ServiceHostConn, err error) error {
+func (b *basicUdpService) deliver(msg MessageWrap, conn *ServiceHostConn, err error) error {
 	if err != nil {
 		return err
 	}
@@ -102,7 +101,6 @@ func (b *basicUdpService) deliver(msg MessageWrap, conn* ServiceHostConn, err er
 	return errors.New(fmt.Sprintf("Listener with Id %d is not registered", msg.Id))
 }
 
-
 func InitBaseUdpService(listenAddr string, buffsize int) NetService {
 	net := NewUdpNet(buffsize)
 	listen, err := net.Listen(listenAddr)
@@ -114,19 +112,19 @@ func InitBaseUdpService(listenAddr string, buffsize int) NetService {
 		net:       net,
 		listeners: make(map[string]*basicUpdClient),
 	}
-	go func() {
+	go func(listen <-chan HostConn, net Net, service *basicUdpService) {
 		for {
 			select {
-			case c := <- listen:
+			case c := <-listen:
 				conn := &ServiceHostConn{Conn: c}
-				msg, err := net.RecvFrom(conn)
-				if err = service.deliver(msg.(MessageWrap), conn, err); err != nil {
+				if msg, err := net.RecvFrom(conn); err != nil {
+					panic(err)
+				} else if err = service.deliver(msg.(MessageWrap), conn, err); err != nil {
 					panic(err)
 				}
 			}
 		}
-	}()
+	}(listen, net, service)
 
 	return service
 }
-

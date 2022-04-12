@@ -10,11 +10,10 @@ import (
 	"sync"
 )
 
-
 type tcpHostConn struct {
-	conn net.Conn
+	conn      net.Conn
 	serviceId string
-	sendLock *sync.Mutex
+	sendLock  *sync.Mutex
 }
 
 func (t tcpHostConn) ServiceId() string {
@@ -39,7 +38,6 @@ func (t tcpHostConn) Send(b []byte) error {
 	return writeFully(t.conn, b)
 }
 
-
 func (t tcpHostConn) Close() error {
 	return t.conn.Close()
 }
@@ -57,14 +55,14 @@ func NewTcpNet(log *logrus.Logger) Net {
 	return &tcp{
 		listener:         nil,
 		msgDeserializers: make(map[uint16]MessageDeserializer),
-		log: log,
+		log:              log,
 	}
 }
 
 type tcp struct {
-	listener net.Listener
+	listener         net.Listener
 	msgDeserializers map[uint16]MessageDeserializer
-	log *logrus.Logger
+	log              *logrus.Logger
 }
 
 func (t tcp) RegisterMessage(message Message) {
@@ -95,12 +93,11 @@ func (t tcp) OpenAsync(addr string, ch chan<- ReceivedConnection) {
 		conn, err := t.Open(addr)
 		ch <- ReceivedConnection{
 			Addr: addr,
-			Conn:  conn,
-			Err: err,
+			Conn: conn,
+			Err:  err,
 		}
 	}()
 }
-
 
 func (t tcp) recvAndDeserialize(conn HostConn) (Message, error) {
 	b, err := conn.Receive()
@@ -109,7 +106,7 @@ func (t tcp) recvAndDeserialize(conn HostConn) (Message, error) {
 	}
 	code := binary.BigEndian.Uint16(b)
 	if d, ok := t.msgDeserializers[code]; ok {
-		return d(b[binary.Size(code):])
+		return d(bytes.NewBuffer(b[binary.Size(code):]))
 	}
 	return nil, errors.New(fmt.Sprintln("Unknown Msg code", code))
 }
@@ -122,9 +119,9 @@ func (t tcp) RecvFromAsync(conn HostConn, ch chan<- ReceivedMessage) {
 	go func() {
 		m, err := t.recvAndDeserialize(conn)
 		ch <- ReceivedMessage{
-			Conn:  conn,
-			Msg:   m,
-			Err: err,
+			Conn: conn,
+			Msg:  m,
+			Err:  err,
 		}
 	}()
 }
@@ -135,15 +132,17 @@ func (t tcp) SendTo(conn HostConn, message Message) error {
 	if err != nil {
 		return err
 	}
-	payload, err := message.Serialize()
+	payload := new(bytes.Buffer)
+	err = message.Serialize(payload)
 	if err != nil {
 		return err
 	}
-	err = writeFully(buf, payload)
+	payloadBytes := payload.Bytes()
+	err = writeFully(buf, payloadBytes)
 	t.log.WithFields(logrus.Fields{
-		"Msg": message,
-		"to": conn.Addr().String(),
-		"size": len(payload),
+		"Msg":  message,
+		"to":   conn.Addr().String(),
+		"size": len(payloadBytes),
 	}).Debug("Sending")
 	return conn.Send(buf.Bytes())
 }
@@ -173,7 +172,7 @@ func (t *tcp) Listen(addr string) (<-chan HostConn, error) {
 				return
 			} else {
 				ch <- tcpHostConn{
-					conn: conn,
+					conn:     conn,
 					sendLock: &sync.Mutex{},
 				}
 			}
