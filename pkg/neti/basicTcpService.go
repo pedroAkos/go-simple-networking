@@ -2,17 +2,21 @@ package neti
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
 
 type basicTcpClient struct {
-	self * string
-	id string
-	net Net
-	rcv chan ReceivedMessage
+	self *string
+	id   string
+	net  Net
+	rcv  chan ReceivedMessage
 	acpt chan *ServiceHostConn
+
+	msgs map[uint16]MessageDeserializer
 }
 
 func (b *basicTcpClient) Id() string {
@@ -28,14 +32,23 @@ func (b *basicTcpClient) Accept() <-chan *ServiceHostConn {
 }
 
 func (b *basicTcpClient) RegisterMessage(message Message) {
-	b.net.RegisterMessage(MessageWrap{b.id, message})
+	if _, ok := b.msgs[message.Code()]; ok {
+		panic("Message already registered")
+	} else {
+		b.msgs[message.Code()] = message.Deserialize
+	}
 }
 
 func (b *basicTcpClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
 	m, err := b.net.RecvFrom(conn)
 	if err == nil {
 		msg := m.(MessageWrap)
-		return msg.Msg, err
+		if d, ok := b.msgs[msg.code]; ok {
+			return d(msg.buff)
+		} else {
+			log.Warn("Unable to deserialize message with code ", msg.code, " for protocol ", b.id, ": Unknown serializer")
+		}
+		return nil, errors.New(fmt.Sprintf("Unable to deserialize message with code %v: Unknown serializer", msg.Code()))
 	} else {
 		return nil, err
 	}
@@ -71,7 +84,6 @@ func (b *basicTcpClient) Self() string {
 	return *b.self
 }
 
-
 func createTcpClient(self *string, id string, net Net) *basicTcpClient {
 	return &basicTcpClient{
 		self: self,
@@ -79,13 +91,14 @@ func createTcpClient(self *string, id string, net Net) *basicTcpClient {
 		net:  net,
 		rcv:  make(chan ReceivedMessage),
 		acpt: make(chan *ServiceHostConn),
+		msgs: make(map[uint16]MessageDeserializer),
 	}
 }
 
 type basicTcpService struct {
-	self string
-	net Net
-	listeners map[string]  *basicTcpClient
+	self      string
+	net       Net
+	listeners map[string]*basicTcpClient
 
 	logger *log.Logger
 }
@@ -94,7 +107,7 @@ func (b *basicTcpService) GetConfiguration() Configuration {
 	parts := strings.Split(b.self, ":")
 	port, _ := strconv.Atoi(parts[1])
 	return Configuration{
-		ip: parts[0],
+		ip:   parts[0],
 		port: port,
 	}
 }
@@ -104,7 +117,6 @@ func (b *basicTcpService) RegisterListener(id string) NetClient {
 	b.listeners[id] = client
 	return client
 }
-
 
 func (b *basicTcpService) accept(bid []byte, conn HostConn) {
 	b.logger.Debug("Accepting: ", conn)
@@ -130,6 +142,7 @@ func (b *basicTcpService) accept(bid []byte, conn HostConn) {
 
 func InitBaseTcpService(listenAddr string, logger *log.Logger) NetService {
 	net := NewTcpNet(logger)
+	net.RegisterMessage(MessageWrap{})
 	listen, err := net.Listen(listenAddr)
 	if err != nil {
 		panic(err)
@@ -139,13 +152,13 @@ func InitBaseTcpService(listenAddr string, logger *log.Logger) NetService {
 		self:      listenAddr,
 		net:       net,
 		listeners: make(map[string]*basicTcpClient),
-		logger: logger,
+		logger:    logger,
 	}
 	go func() {
 		for {
 			select {
-			case conn := <- listen:
-				if bid, err := conn.Receive();  err != nil {
+			case conn := <-listen:
+				if bid, err := conn.Receive(); err != nil {
 					logger.Error(err)
 				} else {
 					go service.accept(bid, conn)

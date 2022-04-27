@@ -17,11 +17,11 @@ type NetClient interface {
 	RegisterMessage(message Message)                         //Register Message in the NetClient (Known how to deserialize)
 	RecvFrom(conn *ServiceHostConn) (Message, error)         //Receive Message from ServiceHostConn
 	SendTo(conn *ServiceHostConn, message Message) error     //Send Message to ServiceHostConn
-	OpenTo(addr string, id string) (*ServiceHostConn, error) //Open ServiceHostConn to peer with addr to NetClient ID
+	OpenTo(addr string, id string) (*ServiceHostConn, error) //Open ServiceHostConn to peer with addr to NetClient NodeID
 	Accept() <-chan *ServiceHostConn                         //Accept Connection
 	Self() string                                            //Self Address
 	Type() TransportType                                     //Transport Type
-	Id() string                                              //ID of NetClient
+	Id() string                                              //NodeID of NetClient
 }
 
 type NetService interface {

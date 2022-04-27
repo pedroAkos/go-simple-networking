@@ -3,6 +3,7 @@ package neti
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
@@ -15,6 +16,8 @@ type basicUpdClient struct {
 	listenCh chan *ServiceHostConn
 
 	buffered map[string][]ReceivedMessage
+
+	msgs map[uint16]MessageDeserializer
 }
 
 func (b *basicUpdClient) Accept() <-chan *ServiceHostConn {
@@ -38,7 +41,11 @@ func (b *basicUpdClient) OpenTo(addr string, serviceId string) (*ServiceHostConn
 }
 
 func (b *basicUpdClient) RegisterMessage(message Message) {
-	b.net.RegisterMessage(MessageWrap{b.id, message})
+	if _, ok := b.msgs[message.Code()]; ok {
+		panic("Message already registered")
+	} else {
+		b.msgs[message.Code()] = message.Deserialize
+	}
 }
 
 func (b *basicUpdClient) RecvFrom(conn *ServiceHostConn) (Message, error) {
@@ -57,6 +64,16 @@ func (b *basicUpdClient) Self() string {
 	return *b.self
 }
 
+func (b *basicUpdClient) deliver(msg MessageWrap, conn *ServiceHostConn) {
+	conn.ServiceId = msg.Id
+	if d, ok := b.msgs[msg.code]; ok {
+		conn.Msg, _ = d(msg.buff)
+		b.listenCh <- conn
+	} else {
+		log.Warn("Unable to deserialize message with code ", msg.code, " for protocol ", b.id, ": Unknown serializer")
+	}
+}
+
 func createUpdClient(self *string, id string, net Net) *basicUpdClient {
 	return &basicUpdClient{
 		self:     self,
@@ -64,6 +81,7 @@ func createUpdClient(self *string, id string, net Net) *basicUpdClient {
 		net:      net,
 		listenCh: make(chan *ServiceHostConn),
 		buffered: make(map[string][]ReceivedMessage),
+		msgs:     make(map[uint16]MessageDeserializer),
 	}
 }
 
@@ -93,9 +111,7 @@ func (b *basicUdpService) deliver(msg MessageWrap, conn *ServiceHostConn, err er
 		return err
 	}
 	if c, ok := b.listeners[conn.ServiceId]; ok {
-		conn.ServiceId = msg.Id
-		conn.Msg = msg.Msg
-		c.listenCh <- conn
+		go c.deliver(msg, conn)
 		return nil
 	}
 	return errors.New(fmt.Sprintf("Listener with Id %d is not registered", msg.Id))
@@ -103,6 +119,7 @@ func (b *basicUdpService) deliver(msg MessageWrap, conn *ServiceHostConn, err er
 
 func InitBaseUdpService(listenAddr string, buffsize int) NetService {
 	net := NewUdpNet(buffsize)
+	net.RegisterMessage(MessageWrap{})
 	listen, err := net.Listen(listenAddr)
 	if err != nil {
 		panic(err)
