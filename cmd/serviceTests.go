@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/pedroAkos/network/pkg/neti"
+	"github.com/pedroAkos/go-simple-networking/pkg/neti"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"os"

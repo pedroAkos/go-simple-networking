@@ -1,4 +1,4 @@
-module github.com/pedroAkos/network
+module github.com/pedroAkos/go-simple-networking
 
 go 1.18
 

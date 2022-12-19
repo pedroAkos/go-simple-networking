@@ -2,7 +2,7 @@ package pingpong
 
 import (
 	"bytes"
-	"github.com/pedroAkos/network/pkg/neti"
+	"github.com/pedroAkos/go-simple-networking/pkg/neti"
 )
 
 type Ping struct {

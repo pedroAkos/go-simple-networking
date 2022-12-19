@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/pedroAkos/network/cmd/pingpong"
-	"github.com/pedroAkos/network/pkg/neti"
+	"github.com/pedroAkos/go-simple-networking/cmd/pingpong"
+	"github.com/pedroAkos/go-simple-networking/pkg/neti"
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
