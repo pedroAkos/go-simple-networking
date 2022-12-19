@@ -140,6 +140,7 @@ func (b *basicTcpService) accept(bid []byte, conn HostConn) {
 	}
 }
 
+// InitBaseTcpService creates a new basic tcp service
 func InitBaseTcpService(listenAddr string, logger *log.Logger) NetService {
 	net := NewTcpNet(logger)
 	net.RegisterMessage(MessageWrap{})

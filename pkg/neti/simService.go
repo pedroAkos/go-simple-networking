@@ -100,6 +100,8 @@ type simService struct {
 	listenners map[string]*simClient
 }
 
+// NewSimUDPService creates a new SimUDPService
+// This is a service that can be used to simulate a network.
 func NewSimUDPService() NetService {
 	return &simService{
 		protos:     make(map[string]uint64),

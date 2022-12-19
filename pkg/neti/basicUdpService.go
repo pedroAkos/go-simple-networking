@@ -117,6 +117,7 @@ func (b *basicUdpService) deliver(msg MessageWrap, conn *ServiceHostConn, err er
 	return errors.New(fmt.Sprintf("Listener with Id %v is not registered, entries: %v", conn.ServiceId, b.listeners))
 }
 
+// InitBaseUdpService creates a new basicUdpService
 func InitBaseUdpService(listenAddr string, buffsize int) NetService {
 	net := NewUdpNet(buffsize)
 	net.RegisterMessage(MessageWrap{})

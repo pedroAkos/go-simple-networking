@@ -11,6 +11,7 @@ import (
 
 type MessageDeserializer func(*bytes.Buffer) (Message, error)
 
+// Message is the interface that wraps the basic Message methods.
 type Message interface {
 	String() string
 	Name() string
@@ -19,6 +20,8 @@ type Message interface {
 	Deserialize(buff *bytes.Buffer) (Message, error)
 }
 
+// HostConn is the interface that wraps the basic HostConn methods.
+// This represents a connection to a host.
 type HostConn interface {
 	fmt.Stringer
 	Addr() net.Addr
@@ -45,6 +48,11 @@ type SentMessage struct {
 	Err  error
 }
 
+// Net is the interface that wraps the basic Net methods.
+// This represents a network. It can be a TCP, UDP, etc.
+// It can be used to send and receive messages.
+// It can be used to listen for new connections.
+// It can be used to connect to other hosts.
 type Net interface {
 	RegisterMessage(message Message)
 	Listen(addr string) (<-chan HostConn, error)
@@ -76,7 +84,8 @@ func readFully(reader io.Reader, toRead int) ([]byte, error) {
 	return b, err
 }
 
-//taken from https://gist.github.com/schwarzeni/f25031a3123f895ff3785970921e962c
+// GetInterfaceIpv4Addr returns the IPv4 address of the interface with the given name.
+// taken from https://gist.github.com/schwarzeni/f25031a3123f895ff3785970921e962c
 func GetInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
 	var (
 		ief      *net.Interface

@@ -7,20 +7,23 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Configuration is the configuration for the network
 type Configuration struct {
-	iface 	string
-	ip		 	string
-	port 		int
+	iface string
+	ip    string
+	port  int
 
-	buffSize	int
+	buffSize int
 
-	logger		*logrus.Logger
+	logger *logrus.Logger
 }
 
+// String returns a string representation of the configuration
 func (c Configuration) String() string {
 	return fmt.Sprintf("{iface: %v, ip: %v, port: %v, buffsize: %v}", c.iface, c.ip, c.port, c.buffSize)
 }
 
+// SetPFlags sets the pflags for the configuration
 func SetPFlags() {
 	pflag.String("net.ip", "", "IP address to bind")
 	pflag.String("net.iface", "lo0", "Network interface to bind")
@@ -28,6 +31,7 @@ func SetPFlags() {
 	pflag.String("net.loglvl", "info", "Log Level for network")
 }
 
+// LoadConfiguration loads the configuration from viper
 func LoadConfiguration(viper *viper.Viper) Configuration {
 	c := Configuration{}
 	c.ip = viper.GetString("net.ip")
@@ -54,14 +58,17 @@ func LoadConfiguration(viper *viper.Viper) Configuration {
 	return c
 }
 
+// Address returns the addresses for the configuration
 func (c Configuration) Address() string {
 	return fmt.Sprintf("%s:%d", c.ip, c.port)
 }
 
+// BuffSize returns the buffer size for the configuration (used for UDP connections)
 func (c Configuration) BuffSize() int {
 	return c.buffSize
 }
 
+// WithPort returns a new configuration with the port changed
 func (c Configuration) WithPort(port int) string {
 	return fmt.Sprintf("%v:%v", c.ip, port)
 }
