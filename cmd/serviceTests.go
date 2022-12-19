@@ -61,9 +61,9 @@ func main() {
 	client2 := netserv.RegisterListener(client2ID)
 
 	client1.RegisterMessage(msg{code: 1})
-	client1.RegisterMessage(msg{code: 1})
+	client2.RegisterMessage(msg{code: 1})
 	client1.RegisterMessage(msg{code: 2})
-	client1.RegisterMessage(msg{code: 2})
+	client2.RegisterMessage(msg{code: 2})
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT)

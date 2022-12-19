@@ -114,7 +114,7 @@ func (b *basicUdpService) deliver(msg MessageWrap, conn *ServiceHostConn, err er
 		go c.deliver(msg, conn)
 		return nil
 	}
-	return errors.New(fmt.Sprintf("Listener with Id %d is not registered", msg.Id))
+	return errors.New(fmt.Sprintf("Listener with Id %v is not registered, entries: %v", conn.ServiceId, b.listeners))
 }
 
 func InitBaseUdpService(listenAddr string, buffsize int) NetService {
@@ -137,7 +137,8 @@ func InitBaseUdpService(listenAddr string, buffsize int) NetService {
 				if msg, err := net.RecvFrom(conn); err != nil {
 					panic(err)
 				} else if err = service.deliver(msg.(MessageWrap), conn, err); err != nil {
-					panic(err)
+					//panic(err)
+					log.Warn(err)
 				}
 			}
 		}
